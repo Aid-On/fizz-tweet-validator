@@ -1,0 +1,31 @@
+// wasm — ブラウザ/Node の X UI から呼ぶ。text を線形メモリに書き (tw_alloc)、
+// tw_weighted_length() 等が Int を返す。文字列を跨がない設計。
+import self as tw
+import bytes
+import float
+import int
+
+var g_text: Bytes = bytes.new(0)
+
+@export(wasm, "tw_alloc")
+fn tw_alloc(len: Float) -> RawPtr = {
+  g_text = bytes.new(float.to_int(len))
+  bytes.as_mut_ptr(g_text)
+}
+
+@export(wasm, "tw_weighted_length")
+fn tw_weighted_length() -> Float = int.to_float(tw.weighted_length(bytes.to_string_lossy(g_text)))
+
+@export(wasm, "tw_remaining")
+fn tw_remaining() -> Float = int.to_float(tw.remaining(bytes.to_string_lossy(g_text)))
+
+@export(wasm, "tw_is_valid")
+fn tw_is_valid() -> Float = if tw.is_valid(bytes.to_string_lossy(g_text)) then 1.0 else 0.0
+
+effect fn main() -> Unit = {
+  let _a = tw_alloc(1.0)
+  let _b = tw_weighted_length()
+  let _c = tw_remaining()
+  let _d = tw_is_valid()
+  ()
+}

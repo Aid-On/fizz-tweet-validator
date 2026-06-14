@@ -1,0 +1,4 @@
+[package]
+name = "fizz_tweet_validator"
+version = "0.1.0"
+description = "Fizz tweet validator — X (twitter-text) weighted character count (CJK/fullwidth = 2) and 280-limit validation. One Almide core, native + wasm."

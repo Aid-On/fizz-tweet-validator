@@ -1,0 +1,18 @@
+// CLI (native) — stdin 各行のツイートを重み付きカウント。
+import self as tw
+import io
+import string
+import int
+
+effect fn main() -> Unit = {
+  var open = true
+  while open {
+    let line = io.read_line()
+    if string.trim(line) == "" then { open = false }
+    else {
+      let t = string.trim(line)
+      let valid = if tw.is_valid(t) then "ok" else "NG"
+      println(int.to_string(tw.weighted_length(t)) + "/" + int.to_string(tw.max_weight()) + "\t" + valid + "\t" + t)
+    }
+  }
+}

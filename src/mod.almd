@@ -1,0 +1,55 @@
+// fizz_tweet_validator — X (旧 Twitter) のツイート文字数カウントと上限検証(§9 X連携)。
+//
+// 責務 (一行): ツイート本文の「重み付き文字数」を数え、280 上限に収まるか判定する。
+//
+// X (twitter-text) は文字を一律 1 ではなく重み付きで数える: CJK 漢字 / ひらがな /
+// カタカナ / ハングル / 全角記号などは **2**、それ以外(ASCII・ラテン等)は **1**。
+// openaituber の現状実装は単純な `.length > 280` だが、本家 X の挙動に合わせた重み付き
+// カウントを実装したのがこの部品(日本語ツイートで実際の残り文字数が正しく出る)。
+//
+// 文字列を入れて **Int(長さ)/ Bool(可否)** を返すので wasm でも安全(文字列を跨がない)。
+// codepoint 単位。投稿/UI 表示はブラウザ/Node、カウントは Almide。
+// 注: URL を 23 文字固定で数える t.co 換算は未実装(URL 検出が要るため)。本文の重み計算が対象。
+
+import string
+import list
+
+let MAX_WEIGHT = 280
+
+// codepoint cp の重み: CJK/かな/ハングル/全角などは 2、それ以外 1。
+// (twitter-text default config の weight-2 レンジ主要部。)
+fn char_weight(cp: Int) -> Int =
+  if (cp >= 0x1100 and cp <= 0x115F)     // Hangul Jamo
+  or (cp >= 0x2E80 and cp <= 0x303E)     // CJK radicals, Kangxi, CJK punctuation
+  or (cp >= 0x3041 and cp <= 0x33FF)     // Hiragana, Katakana, CJK symbols
+  or (cp >= 0x3400 and cp <= 0x4DBF)     // CJK Ext-A
+  or (cp >= 0x4E00 and cp <= 0x9FFF)     // CJK Unified Ideographs
+  or (cp >= 0xA000 and cp <= 0xA4CF)     // Yi
+  or (cp >= 0xAC00 and cp <= 0xD7A3)     // Hangul Syllables
+  or (cp >= 0xF900 and cp <= 0xFAFF)     // CJK Compatibility Ideographs
+  or (cp >= 0xFE30 and cp <= 0xFE4F)     // CJK Compatibility Forms
+  or (cp >= 0xFF00 and cp <= 0xFF60)     // Fullwidth forms
+  or (cp >= 0xFFE0 and cp <= 0xFFE6)     // Fullwidth signs
+  then 2 else 1
+
+local fn cp_of(c: String) -> Int = string.codepoint(c) ?? 0
+
+// 重み付き文字数(X の表示カウント)。
+fn weighted_length(text: String) -> Int =
+  list.fold(string.chars(text), 0, (acc, c) => acc + char_weight(cp_of(c)))
+
+// 単純な codepoint 数(参考。openaituber の現状 .length 相当)。
+fn codepoint_length(text: String) -> Int = list.len(string.chars(text))
+
+// 上限(280)。
+fn max_weight() -> Int = MAX_WEIGHT
+
+// 残り文字数(重み基準)。負なら超過。
+fn remaining(text: String) -> Int = MAX_WEIGHT - weighted_length(text)
+
+// 投稿可能か: 空でなく(trim 後)、重み付き長が 280 以下。
+fn is_valid(text: String) -> Bool = {
+  let trimmed_empty = string.trim(text) == ""
+  let len = weighted_length(text)
+  not trimmed_empty and len <= MAX_WEIGHT
+}

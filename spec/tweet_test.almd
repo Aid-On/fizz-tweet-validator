@@ -1,0 +1,28 @@
+import self as tw
+test "ASCII counts as 1 each" {
+  assert_eq(tw.weighted_length("hello"), 5)
+  assert_eq(tw.weighted_length("abc 123"), 7)
+}
+test "CJK / kana count as 2 each" {
+  assert_eq(tw.weighted_length("あ"), 2)
+  assert_eq(tw.weighted_length("漢字"), 4)        // 2 chars * 2
+  assert_eq(tw.weighted_length("こんにちは"), 10)   // 5 * 2
+  assert_eq(tw.weighted_length("aあ"), 3)          // 1 + 2
+}
+test "char_weight ranges" {
+  assert_eq(tw.char_weight(0x41), 1)      // 'A'
+  assert_eq(tw.char_weight(0x3042), 2)    // 'あ'
+  assert_eq(tw.char_weight(0x4E00), 2)    // '一'
+  assert_eq(tw.char_weight(0xFF21), 2)    // fullwidth 'A'
+}
+test "remaining and 280 limit" {
+  assert_eq(tw.remaining("hello"), 275)
+  assert_eq(tw.max_weight(), 280)
+  // 140 CJK chars = 280 weight = ちょうど上限
+  assert(tw.is_valid("あ") == true)
+}
+test "is_valid: empty NG, over-limit NG" {
+  assert_eq(tw.is_valid(""), false)
+  assert_eq(tw.is_valid("   "), false)     // trim 後空
+  assert_eq(tw.is_valid("hello"), true)
+}
